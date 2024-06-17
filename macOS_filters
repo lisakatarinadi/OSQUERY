@@ -1,0 +1,6 @@
+To turn file_events on for macOS, use the flag --enable_file_events=true. The corresponding utility is FSEvents.
+MacOS also has an es_process_file_events table that uses the EndpointSecurity API. However, osquery needs Full Disk Access permission, which can be granted manually or via MDM. To use this, use the flags --disable_endpointsecurity=false --disable_endpointsecurity_fim=false.
+es_process_file_events records which processes accessed which files, whereas file_events does not. However, es_process_file_events will generate more data volume because it captures everything by default. Currently, you can configure EndpointSecurity to ignore certain file paths, but there is no way to configure it to only watch certain filepaths.
+Due to the data volume, Fleet suggests using file_events for macOS, but you can use es_process_file_events.
+On macOS, there are two utilities that enable osquery process auditing: OpenBSM and the EndpointSecurity. Fleet recommends using the EndpointSecurity implementation because it's intended to replace OpenBSM, which is deprecated. EndpointSecurity is available starting macOS 10.15.
+To use the es_process_events tables, use the flag --disable_endpointsecurity=false. See the EndpointSecurity instructions for more information. To use process_events and socket_events with OpenBSM, see the OpenBSM instructions.
