@@ -1,0 +1,77 @@
+Any recent, abnormal local users?
+The two WHERE clauses help filter down results.
+
+```
+SELECT uid,username,shell,directory FROM users
+WHERE type = ‘local’; → Windows Domain Joined systems WHERE shell NOT LIKE ‘%/bin/false’; → MacOS & Linux
+```
+
+What users have administrative privileges? Default Admin group IDs:
+Windows [Administrators] = 544
+MacOS [admin] = 80
+Ubuntu Linux [sudo, root] =27,0
+
+```
+SELECT users.uid,users.username,users.shell FROM user_groups INNER JOIN users ON user_groups.uid = users.uid
+WHERE user_groups.gid = @groupid;
+```
+
+Any abnormal Daemons or Agents?
+If using osqueryi, may need to change the output mode as these columns will have very lengthy strings.
+
+```
+SELECT name,program,program_arguments FROM launchd WHERE disabled != 1 AND run_at_load = 1;
+```
+
+Any abnormal jobs?
+
+```
+SELECT minute,hour,path,command FROM crontab;
+```
+
+Any startup items?
+Lots of stuff can be filtered out. for eg: Windows = desktop.ini for each user profile
+
+```
+SELECT name,path,source,status,username FROM startup_items;
+```
+
+
+
+`SELECT pid, name, ROUND((total_size * '10e-7'), 2) AS used FROM processes ORDER BY total_size DESC LIMIT 5;`
+
+`SELECT (SUM(user) + SUM(nice) + SUM(system) + SUM(idle) * 1.0) AS tsb, SUM(COALESCE(idle, 0)) + SUM(COALESCE(iowait, 0)) AS itsb FROM cpu_time;`
+
+```
+SELECT pid, uid, name, ROUND((
+  (user_time + system_time) / (cpu_time.tsb - cpu_time.itsb)
+) * 100, 2) AS percentage
+FROM processes, (
+SELECT (
+  SUM(user) + SUM(nice) + SUM(system) + SUM(idle) * 1.0) AS tsb,
+  SUM(COALESCE(idle, 0)) + SUM(COALESCE(iowait, 0)) AS itsb
+  FROM cpu_time
+) AS cpu_time
+ORDER BY user_time+system_time DESC
+LIMIT 5;
+```
+
+```
+SELECT DISTINCT h.sha256, p.name, u.username
+FROM processes AS p
+INNER JOIN hash AS h ON h.path = p.path
+INNER JOIN users AS u ON u.uid = p.uid
+ORDER BY start_time DESC
+LIMIT 5;
+```
+
+# Enabling process_events in Osquery
+The process_events table is not enabled by default. You’ll need to set a few command line flags.
+
+`sudo osqueryi --disable_audit=false --verbose --disable_events=false`
+
+You can check whether process events are enabled with the following query.
+
+`SELECT active FROM osquery_events WHERE name = 'process_events';`
+
+If the value of active is 1, then process events are enabled. Start up a few new processes. These should now be added to the process_events table.
